@@ -1,0 +1,9 @@
+/bin
+/lib
+/obj
+/dist
+/.idea
+/config/config.json
+/org.pipservices3.example.data/dummies.json
+settings.xml
+genKey
