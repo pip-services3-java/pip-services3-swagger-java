@@ -9,6 +9,13 @@
     <version>3.0.0</version>
     <packaging>jar</packaging>
 
+    <name>Pip.Services Swagger</name>
+    <description>
+        The swagger module provides a Swagger UI that can be added into microservices
+        and seamlessly integrated with existing REST and Commandable HTTP services.
+    </description>
+    <url>http://www.github.com/pip-services/pip-services</url>
+
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>18</maven.compiler.source>
@@ -157,6 +164,18 @@
                     <useSystemClassLoader>false</useSystemClassLoader>
                 </configuration>
             </plugin>
+            <!-- Uncomment plugin below for auto releases from staging repository -->
+<!--            <plugin>-->
+<!--                <groupId>org.sonatype.plugins</groupId>-->
+<!--                <artifactId>nexus-staging-maven-plugin</artifactId>-->
+<!--                <version>1.6.13</version>-->
+<!--                <extensions>true</extensions>-->
+<!--                <configuration>-->
+<!--                    <serverId>ossrh</serverId>-->
+<!--                    <nexusUrl>https://oss.sonatype.org/</nexusUrl>-->
+<!--                    <autoReleaseAfterClose>true</autoReleaseAfterClose>-->
+<!--                </configuration>-->
+<!--            </plugin>-->
 <!--            Update minor and patch versions-->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
