@@ -1,22 +1,20 @@
-# <img src="https://uploads-ssl.webflow.com/5ea5d3315186cf5ec60c3ee4/5edf1c94ce4c859f2b188094_logo.svg" alt="Pip.Services Logo" width="200"> <br/> Component definitions for Java
+# <img src="https://uploads-ssl.webflow.com/5ea5d3315186cf5ec60c3ee4/5edf1c94ce4c859f2b188094_logo.svg" alt="Pip.Services Logo" width="200"> <br/> Swagger UI for Pip.Services in Java
 
 This module is a part of the [Pip.Services](http://pipservices.org) polyglot microservices toolkit.
-It provides syntax and lexical analyzers and expression calculator optimized for repeated calculations.
+
+The swagger module provides a Swagger UI that can be added into microservices and seamlessly integrated with existing REST and Commandable HTTP services.
 
 The module contains the following packages:
-- **Calculator** - Expression calculator
-- **CSV** - CSV tokenizer
-- **IO** - input/output utility classes to support lexical analysis
-- **Mustache** - Mustache templating engine
-- **Tokenizers** - lexical analyzers to break incoming character streams into tokens
-- **Variants** - dynamic objects that can hold any values and operators for them
+- **Build** - Swagger service factory
+- **Services** - Swagger UI service
 
 <a name="links"></a> Quick links:
 
-* [API Reference](https://pip-services3-java.github.io/pip-services3-expressions-java/)
+* [API Reference](https://pip-services3-java.github.io/pip-services3-swagger-java/)
 * [Change Log](CHANGELOG.md)
 * [Get Help](http://docs.pipservices.org/get_help/)
 * [Contribute](http://docs.pipservices.org/contribute/)
+
 
 ## Use
 
@@ -24,69 +22,146 @@ Go to the pom.xml file in Maven project and add dependencies::
 ```xml
 <dependency>
   <groupId>org.pipservices3</groupId>
-  <artifactId>pip-services3-expressions</artifactId>
-  <version>3.0.2</version>
+  <artifactId>pip-services3-swagger</artifactId>
+  <version>3.0.0</version>
 </dependency>
 ```
 
-The example below shows how to use expression calculator to dynamically
-calculate user-defined expressions.
+Develop a RESTful service component. For example, it may look the following way.
+In the `register` method we load an Open API specification for the service.
+You can also enable swagger by default in the constractor by setting `_swaggerEnable` property.
 
 ```java
-import org.pipservices3.expressions.calculator.ExpressionCalculator;
-import org.pipservices3.expressions.calculator.variables.Variable;
-import org.pipservices3.expressions.calculator.variables.VariableCollection;
-import org.pipservices3.expressions.variants.Variant;
+package org.pipservices3.swagger.example.services;
 
-public class Program {
-    public static void main(String[] args) throws Exception {
-        var calculator = new ExpressionCalculator();
+import jakarta.ws.rs.HttpMethod;
+import jakarta.ws.rs.container.ContainerRequestContext;
+import jakarta.ws.rs.core.Response;
+import org.pipservices3.commons.convert.TypeCode;
+import org.pipservices3.commons.validate.ObjectSchema;
+import org.pipservices3.rpc.services.RestService;
 
-        calculator.setExpression("A + b / (3 - Max(-123, 1)*2)");
+import java.util.Objects;
 
-        var vars = new VariableCollection();
-        vars.add(new Variable("A", new Variant("1")));
-        vars.add(new Variable("B", new Variant(3)));
-
-        var result = calculator.evaluateWithVariables(vars);
-        System.out.println("The result of the expression is " + result.getAsString());
+public class MyRestService extends RestService {
+    public MyRestService() {
+        super();
+        this._baseRoute = "myservice";
+        this._swaggerEnable = true;
     }
-}
 
-```
+    private Response greeting(ContainerRequestContext req) {
+        var name = req.getUriInfo().getPathParameters().get("name").get(0);
+        var response = "Hello, " + name + "!";
+        return this.sendResult(response);
+    }
 
-This is an example to process mustache templates.
-
-
-```java
-import org.pipservices3.expressions.mustache.MustacheTemplate;
-
-import java.util.HashMap;
-import java.util.Map;
-
-public class Program {
-    public static void main(String[] args) throws Exception {
-        var mustache = new MustacheTemplate();
-        mustache.setTemplate("Hello, {{{NAME}}}{{#ESCLAMATION}}!{{/ESCLAMATION}}{{#unless ESCLAMATION}}.{{/unless}}");
-        var result = mustache.evaluateWithVariables(
-                new HashMap<>(Map.of(
-                        "NAME", "Mike",
-                        "ESCLAMATION", true
-                ))
+    @Override
+    public void register() {
+        this.registerRoute(
+                HttpMethod.GET, "/greeting",
+                new ObjectSchema()
+                        .withRequiredProperty("name", TypeCode.String),
+                this::greeting
         );
-        System.out.println("The result of template evaluation is '" + result + "'");
+
+        var dirname = Objects.requireNonNull(this.getClass().getClassLoader().getResource("")).getPath();
+        this.registerOpenApiSpecFromFile(dirname + "./org/pipservices3/swagger/example/services/dummy.yml");
     }
 }
-
 ```
+
+The Open API specification for the service shall be prepared either manually
+or using [Swagger Editor](https://editor.swagger.io/)
+```yaml
+openapi: '3.0.2'
+info:
+  title: 'MyService'
+  description: 'MyService REST API'
+  version: '1'
+paths:
+  /myservice/greeting:
+    get:
+      tags:
+        - myservice
+      operationId: 'greeting'
+      parameters:
+      - name: correlation_id
+        in: query
+        description: Correlation ID
+        required: false
+        schema:
+          type: string
+      - name: name
+        in: query
+        description: Name of a person
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: 'Successful response'
+          content:
+            application/json:
+              schema:
+                type: 'string'
+```
+
+Include Swagger service into `config.yml` file and enable swagger for your REST or Commandable HTTP services.
+Also explicitely adding HttpEndpoint allows to share the same port betwee REST services and the Swagger service.
+```yaml
+---
+...
+# Shared HTTP Endpoint
+- descriptor: "pip-services:endpoint:http:default:1.0"
+  connection:
+    protocol: http
+    host: localhost
+    port: 8080
+
+# Swagger Service
+- descriptor: "pip-services:swagger-service:http:default:1.0"
+
+# My RESTful Service
+- descriptor: "myservice:service:rest:default:1.0"
+  swagger:
+    enable: true
+```
+
+Finally, remember to add factories to your container, to allow it creating required components.
+```java
+...
+import org.pipservices3.container.ProcessContainer;
+import org.pipservices3.rpc.build.DefaultRpcFactory;
+import org.pipservices3.swagger.build.DefaultSwaggerFactory;
+
+public class MyProcess extends ProcessContainer {
+    public MyProcess() {
+        super("myservice", "MyService microservice");
+
+        this._factories.add(new DefaultRpcFactory());
+        this._factories.add(new DefaultSwaggerFactory());
+        this._factories.add(new MyServiceFactory());
+    ...
+    }
+}
+```
+
+Launch the microservice and open the browser to open the Open API specification at
+[http://localhost:8080/greeting/swagger](http://localhost:8080/greeting/swagger)
+
+Then open the Swagger UI using the link [http://localhost:8080/swagger](http://localhost:8080/swagger).
+The result shall look similar to the picture below.
+
+<img src="swagger-ui.png"/>
 
 ## Develop
 
 For development you shall install the following prerequisites:
-* Java SE Development Kit 18+
-* Eclipse Java Photon or another IDE of your choice
+* Node.js 18+
+* Visual Studio Code or another IDE of your choice
 * Docker
-* Apache Maven
+* Typescript
 
 Build the project:
 ```bash
@@ -112,6 +187,6 @@ Before committing changes run dockerized build and test as:
 
 ## Contacts
 
-The initial implementation is done by 
-**Sergey Seroukhov** 
-**Danil Prisyazhnyi**.
+The Node.js version of Pip.Services is created and maintained by:
+- **Sergey Seroukhov**
+- **Danil Prisiazhnyi**
