@@ -29,8 +29,8 @@ jobs:
 
     ############# Test #############
 
-    - name: Test the component
-      uses: pip-devops/actions/java/test@v1
+#     - name: Test the component
+#       uses: pip-devops/actions/java/test@v1
 
     ############# Tag #############
 
