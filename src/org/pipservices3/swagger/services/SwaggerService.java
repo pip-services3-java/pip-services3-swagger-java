@@ -5,7 +5,6 @@ import jakarta.ws.rs.HttpMethod;
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.glassfish.jersey.process.Inflector;
 import org.pipservices3.commons.convert.JsonConverter;
 import org.pipservices3.rpc.services.ISwaggerService;
 import org.pipservices3.rpc.services.RestService;
@@ -22,9 +21,8 @@ public class SwaggerService extends RestService implements ISwaggerService {
         this._baseRoute = "swagger";
     }
 
-    private String calculateFilePath(String fileName) {
-        var dirname = Objects.requireNonNull(this.getClass().getClassLoader().getResource("")).getPath();
-        return dirname + "../src/org/pipservices3/swagger/swagger_ui/" + fileName;
+    private InputStreamReader getFileStream(String fileName) {
+        return new InputStreamReader(Objects.requireNonNull(SwaggerService.class.getClassLoader().getResourceAsStream(fileName)));
     }
 
     private String calculateContentType(String fileName) {
@@ -42,15 +40,13 @@ public class SwaggerService extends RestService implements ISwaggerService {
     }
 
     private boolean checkFileExist(String fileName) {
-        var path = this.calculateFilePath(fileName);
-        return new File(path).exists();
+        return SwaggerService.class.getClassLoader().getResource(fileName) != null;
     }
 
     private String loadFileContent(String fileName) {
-        var path = this.calculateFilePath(fileName);
         StringBuilder resultStringBuilder = new StringBuilder();
         try (BufferedReader br
-                     = new BufferedReader(new InputStreamReader(new FileInputStream(path)))) {
+                     = new BufferedReader(this.getFileStream(fileName))) {
             String line;
             while ((line = br.readLine()) != null) {
                 resultStringBuilder.append(line).append("\n");

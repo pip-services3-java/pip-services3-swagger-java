@@ -106,7 +106,6 @@ public class ExampleSwagger {
             logger.error(null, ex, "Failed to execute the microservice");
             System.exit(1);
         }
-
     }
 
     private static final Semaphore _exitEvent = new Semaphore(0);
